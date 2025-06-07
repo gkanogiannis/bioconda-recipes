@@ -1,0 +1,41 @@
+name: Sync fastreer recipe to fastreeR
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source repo (bioconda-recipes)
+        uses: actions/checkout@v4
+
+      - name: Clone fastreeR (target repo)
+        run: |
+          git clone https://x-access-token:${{ secrets.FASTREER_PAT }}@github.com/gkanogiannis/fastreeR.git target_repo
+
+      - name: Compare files
+        id: compare
+        run: |
+          changed=0
+
+          diff recipes/fastreer/meta.yaml target_repo/deploy/fastreer-bioconda/meta.yaml || changed=1
+          diff recipes/fastreer/build.sh target_repo/deploy/fastreer-bioconda/build.sh || changed=1
+
+          echo "changed=$changed" >> $GITHUB_OUTPUT
+
+      - name: Sync if changed
+        if: steps.compare.outputs.changed == '1'
+        run: |
+          cp recipes/fastreer/meta.yaml target_repo/deploy/fastreer-bioconda/meta.yaml
+          cp recipes/fastreer/build.sh target_repo/deploy/fastreer-bioconda/build.sh
+
+          cd target_repo
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add deploy/fastreer-bioconda/meta.yaml deploy/fastreer-bioconda/build.sh
+          git commit -m "Update fastreer recipe from bioconda-recipes"
+          git push
