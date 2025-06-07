@@ -27,7 +27,7 @@ jobs:
       - name: Rebase from upstream
         run: |
           git checkout master
-          git merge upstream/master
+          git merge upstream/master --allow-unrelated-histories
 
       - name: Push to fork
         run: |
