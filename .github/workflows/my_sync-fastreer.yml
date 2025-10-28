@@ -82,20 +82,18 @@ jobs:
       ##################################################################
       # 5. Sync from fastreeR into this fork, commit, maybe push
       ##################################################################
-      - name: Sync and push if changed
+      - name: Sync, commit, and push branch if changed
         if: steps.compare.outputs.changed == '1'
         run: |
           set -euo pipefail
 
           DRY_RUN='${{ github.event.inputs.dry_run || '' }}'
           if [ -z "$DRY_RUN" ]; then
-            # scheduled runs don't have workflow_dispatch inputs
             DRY_RUN="no"
           fi
 
           echo "Dry run mode: $DRY_RUN"
 
-          # Copy authoritative recipe from fastreeR into this repo's layout
           cp fastreer_src/deploy/fastreer-bioconda/meta.yaml recipes/fastreer/meta.yaml
           cp fastreer_src/deploy/fastreer-bioconda/build.sh recipes/fastreer/build.sh
 
@@ -105,19 +103,16 @@ jobs:
           git add recipes/fastreer/meta.yaml recipes/fastreer/build.sh
 
           if git diff --cached --quiet; then
-            echo "Nothing staged after copy, aborting."
+            echo "No changes to commit."
             exit 0
           fi
 
-          # Extract version from the updated meta.yaml
-          VERSION_LINE=$(grep -E '^\{\% set version' fastreer_src/deploy/fastreer-bioconda/meta.yaml || true)
+          # auto-detect version for commit message
+          VERSION_LINE=$(grep -E '^\{\%[[:space:]]*set[[:space:]]+version' recipes/fastreer/meta.yaml || true)
           VERSION=$(echo "$VERSION_LINE" | sed -E 's/.*"([0-9]+\.[0-9]+\.[0-9]+)".*/\1/' || true)
+          [ -z "$VERSION" ] && VERSION="unknown"
 
-          if [ -z "$VERSION" ]; then
-            VERSION="unknown"
-          fi
-
-          COMMIT_MSG="Update fastreer recipe to v${VERSION} from fastreeR repo"
+          COMMIT_MSG="fastreer: sync recipe to v${VERSION} from fastreeR repo"
           git commit -m "$COMMIT_MSG"
 
           if [ "$DRY_RUN" = "yes" ]; then
@@ -127,3 +122,4 @@ jobs:
           fi
 
           git push
+          echo "Pushed updated recipe for v${VERSION} to this fork. Upstream autobump should PR."
