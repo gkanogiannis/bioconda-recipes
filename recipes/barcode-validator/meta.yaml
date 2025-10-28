@@ -1,5 +1,5 @@
 {% set name = "barcode-validator" %}
-{% set version = "2.0.2" %}
+{% set version = "2.0.9" %}
 
 package:
   name: {{ name|lower }}
@@ -7,7 +7,7 @@ package:
 
 source:
   url: https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/barcode_validator-{{ version }}.tar.gz
-  sha256: 5131aa6e5b3f5fb3da1255bee6d39dde289a3510a9c9dcbd93ccd85172377cad
+  sha256: 2ade239e13ed016ca8fc8079916da1f9e0716890979848e0b8f967afa3299963
 
 build:
   number: 0

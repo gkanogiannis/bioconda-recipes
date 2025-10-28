@@ -1,5 +1,5 @@
 {% set name = "sopa" %}
-{% set version = "2.0.7" %}
+{% set version = "2.1.6" %}
 
 package:
   name: {{ name|lower }}
@@ -7,7 +7,7 @@ package:
 
 source:
   url: https://pypi.org/packages/source/{{ name[0] }}/{{ name }}/sopa-{{ version }}.tar.gz
-  sha256: ca8dc05784c53ed1946e7ad21dc3028608d1d71668644dd2f82079e74ace711e
+  sha256: 30ec02c25cc1c015799cd5c7c01f85486bfa17764e4fc7c81db44e5f2606dea2
 
 build:
   entry_points:
