@@ -26,4 +26,4 @@ jobs:
           bioconda-utils autobump recipes/ config.yml \
             --packages fastreer \
             --exclude "bioconductor*" \
-            --create-pr
+            --create-branch
