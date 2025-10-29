@@ -1,125 +1,41 @@
-name: Sync fastreer recipe from fastreeR
+name: Sync fastreer recipe to fastreeR
 
 on:
-  schedule:
-    - cron: '0 0 * * *'
+  #schedule:
+  #  - cron: '0 0 * * *'
   workflow_dispatch:
-    inputs:
-      dry_run:
-        description: "Dry run (yes/no). If 'yes', don't push changes to this repo."
-        required: false
-        type: choice
-        options:
-          - "no"
-          - "yes"
-        default: "no"
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      ##################################################################
-      # 1. Checkout THIS repo (your bioconda-recipes fork)
-      ##################################################################
-      - name: Checkout bioconda-recipes fork
+      - name: Checkout source repo (bioconda-recipes)
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: my_branch
 
-      ##################################################################
-      # 2. Clone fastreeR to read its canonical recipe
-      ##################################################################
-      - name: Clone fastreeR (source of truth)
+      - name: Clone fastreeR (target repo)
         run: |
-          set -euo pipefail
-          git clone https://x-access-token:${{ secrets.FASTREER_PAT }}@github.com/gkanogiannis/fastreeR.git fastreer_src
+          git clone https://x-access-token:${{ secrets.FASTREER_PAT }}@github.com/gkanogiannis/fastreeR.git target_repo
 
-      ##################################################################
-      # 3. Compare recipe files (fastreeR -> this repo)
-      #
-      #   fastreer_src/deploy/fastreer-bioconda/meta.yaml
-      #   fastreer_src/deploy/fastreer-bioconda/build.sh
-      #
-      #   vs
-      #
-      #   recipes/fastreer/meta.yaml
-      #   recipes/fastreer/build.sh
-      #
-      ##################################################################
       - name: Compare files
         id: compare
         run: |
-          set -euo pipefail
-
           changed=0
 
-          if ! diff -q fastreer_src/deploy/fastreer-bioconda/meta.yaml recipes/fastreer/meta.yaml > /dev/null; then
-            echo "meta.yaml differs"
-            changed=1
-          fi
+          diff recipes/fastreer/meta.yaml target_repo/deploy/fastreer-bioconda/meta.yaml || changed=1
+          diff recipes/fastreer/build.sh target_repo/deploy/fastreer-bioconda/build.sh || changed=1
 
-          if ! diff -q fastreer_src/deploy/fastreer-bioconda/build.sh recipes/fastreer/build.sh > /dev/null; then
-            echo "build.sh differs"
-            changed=1
-          fi
+          echo "changed=$changed" >> $GITHUB_OUTPUT
 
-          echo "changed=$changed" >> "$GITHUB_OUTPUT"
-
- ##################################################################
-      # 4. Show diff if changed (for visibility / for dry run inspection)
-      ##################################################################
-      - name: Show diff
+      - name: Sync if changed
         if: steps.compare.outputs.changed == '1'
         run: |
-          set -euo pipefail
-          echo "===== DIFF meta.yaml (fastreeR -> this repo) ====="
-          diff -u recipes/fastreer/meta.yaml fastreer_src/deploy/fastreer-bioconda/meta.yaml || true
-          echo
-          echo "===== DIFF build.sh (fastreeR -> this repo) ====="
-          diff -u recipes/fastreer/build.sh fastreer_src/deploy/fastreer-bioconda/build.sh || true
+          cp recipes/fastreer/meta.yaml target_repo/deploy/fastreer-bioconda/meta.yaml
+          cp recipes/fastreer/build.sh target_repo/deploy/fastreer-bioconda/build.sh
 
-      ##################################################################
-      # 5. Sync from fastreeR into this fork, commit, maybe push
-      ##################################################################
-      - name: Sync, commit, and push branch if changed
-        if: steps.compare.outputs.changed == '1'
-        run: |
-          set -euo pipefail
-
-          DRY_RUN='${{ github.event.inputs.dry_run || '' }}'
-          if [ -z "$DRY_RUN" ]; then
-            DRY_RUN="no"
-          fi
-
-          echo "Dry run mode: $DRY_RUN"
-
-          cp fastreer_src/deploy/fastreer-bioconda/meta.yaml recipes/fastreer/meta.yaml
-          cp fastreer_src/deploy/fastreer-bioconda/build.sh recipes/fastreer/build.sh
-
+          cd target_repo
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          git add recipes/fastreer/meta.yaml recipes/fastreer/build.sh
-
-          if git diff --cached --quiet; then
-            echo "No changes to commit."
-            exit 0
-          fi
-
-          # auto-detect version for commit message
-          VERSION_LINE=$(grep -E '^\{\%[[:space:]]*set[[:space:]]+version' recipes/fastreer/meta.yaml || true)
-          VERSION=$(echo "$VERSION_LINE" | sed -E 's/.*"([0-9]+\.[0-9]+\.[0-9]+)".*/\1/' || true)
-          [ -z "$VERSION" ] && VERSION="unknown"
-
-          COMMIT_MSG="fastreer: sync recipe to v${VERSION} from fastreeR repo"
-          git commit -m "$COMMIT_MSG"
-
-          if [ "$DRY_RUN" = "yes" ]; then
-            echo "DRY RUN: Not pushing."
-            git log -1 --stat
-            exit 0
-          fi
-
+          git add deploy/fastreer-bioconda/meta.yaml deploy/fastreer-bioconda/build.sh
+          git commit -m "Update fastreer recipe from bioconda-recipes"
           git push
-          echo "Pushed updated recipe for v${VERSION} to this fork. Upstream autobump should PR."
