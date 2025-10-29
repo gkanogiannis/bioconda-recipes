@@ -1,0 +1,30 @@
+name: Autobump fastreer recipe
+
+on:
+  #schedule:
+  #  - cron: '0 7 * * *'  # every day at 7am UTC
+  workflow_dispatch:
+
+jobs:
+  autobump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install bioconda-utils
+        run: |
+          conda create -y -n bioconda-utils python=3.10
+          source /usr/share/miniconda/bin/activate bioconda-utils
+          conda install -y git pip --file https://raw.githubusercontent.com/bioconda/bioconda-utils/master/bioconda_utils/bioconda_utils-requirements.txt -c conda-forge -c bioconda
+          pip install git+https://github.com/bioconda/bioconda-utils
+
+      - name: Run autobump
+        env:
+          GITHUB_TOKEN: ${{ secrets.FASTREER_PAT }}
+        run: |
+          source /usr/share/miniconda/bin/activate bioconda-utils
+          git remote add upstream https://github.com/bioconda/bioconda-recipes.git
+          bioconda-utils autobump recipes/ config.yml \
+            --packages fastreer \
+            --exclude "bioconductor*" \
+            --create-branch 

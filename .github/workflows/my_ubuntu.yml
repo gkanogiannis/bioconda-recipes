@@ -1,0 +1,22 @@
+name: Debug GitHub runner
+
+on:
+  workflow_dispatch:
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authorize my SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEBUG_SSH_PUBKEY }}" >> ~/.ssh/authorized_keys
+          chmod 700 ~/.ssh
+          chmod 600 ~/.ssh/authorized_keys
+
+      - name: Start tmate session
+        uses: mxschmitt/action-tmate@v3
+        with:
+          limit-access-to-actor: false
