@@ -1,6 +1,6 @@
 {% set name = "methbat" %}
-{% set version = "0.16.0" %}
-{% set sha256 = "8123c887e1707fba016a2563723f579c591cac20e0208f25874e6c4945f3db82" %}
+{% set version = "1.0.0" %}
+{% set sha256 = "41619bfba98b0d625382bd5215e9fc13e69bb420476d78441069bf055849db43" %}
 
 package:
   name: {{ name }}
